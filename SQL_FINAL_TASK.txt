@@ -1,0 +1,165 @@
+TASK-1
+Q.Write a query to list out for each author and doctor the number of episodes made, but restrict your output to show only the author/doctor combinations for which more than 5 episodes have been written.
+ANS=>
+
+select a.AuthorName,d.DoctorName,count(e.EpisodeId)
+from tblAuthor a,tblEpisode e,tblDoctor d
+where a.AuthorId= e.AuthorId and
+d.DoctorId= e.DoctorId
+having count(e.Episodeid) > 5 order by count(e.Episodeid) desc
+
+##############################################################
+
+TASK-2
+Q.
+
+ANS=>
+
+select 1 + (year(EventDate) - 1) / 100  as century,count(Eventid) NumberofEvent from tblEvent group by (1 + (year(EventDate) - 1) / 100)
+
+##############################################################
+
+TASK-3
+Create a subquery to list out all of those events whose:
+Country id is not in the list of the last 30 country ids in alphabetical order; and
+Category id is not in the list of the last 15 category ids in alphabetical order.
+
+ANS=>
+
+select EventName,EventDetails 
+from tblEvent 
+where
+ CountryID not in (select top 30 CountryId from tblCountry order by CountryName desc)
+ and 
+ CategoryID not in (select top 15 CategoryID from tblCategory order by CategoryName desc)
+
+##############################################################
+
+TASK-4
+Q.Use a recursive CTE based on this table to show all of the menus, with breadcrumbs:
+
+ANS=>
+
+with CTE_MENU(MenuId,MenuName,ParentMenuId,Level,BreadCrumb) AS
+(
+	select MenuId,MenuName,ParentMenuId,0 as Level ,
+	CAST([MenuName] AS VARCHAR(MAX))
+	 AS BreadCrumb
+	From tblMenu 
+	Where ParentMenuId IS NULL
+	
+	UNION ALL
+	Select m.MenuId,m.MenuName,m.ParentMenuId,m1.Level+1,m1.BreadCrumb+'>' +CAST([m].[MenuName] As VARCHAR(MAX) )
+	from tblMenu as m JOIN CTE_MENU as m1 ON m1.MenuId=m.ParentMenuId
+	
+	)
+	select * From CTE_MENU
+	Order By Level
+	GO
+	
+	
+##############################################################
+
+TASK-5
+Q.Write a query to retrieve users from the tables. Input will be given in format 2431,2580' upon receiving the input, you should return user FullNameFL and AdjusterId
+
+ANS=>
+
+--UserPersonal table
+create table UserPersonal (
+Uid varchar(50) primary key,
+Ufnm varchar(50) not null,
+Aid varchar(50) foreign key(Aid) references Adjuster(Aid) ON DELETE CASCADE ON UPDATE CASCADE
+
+);
+--Adjuster Table
+create table Adjuster(
+Aid varchar(50) primary key,
+Anm varchar(50) not null,
+);
+
+
+--insert into Adjuster values
+insert into Adjuster(Aid,Anm) values ('4170','Tushar');
+insert into Adjuster (Aid,Anm) values ('1680','Mahesh');
+insert into Adjuster (Aid,Anm) values ('4931','vishal');
+insert into Adjuster (Aid,Anm) values ('149','karan');
+insert into Adjuster (Aid,Anm) values ('687','niyati');
+insert into Adjuster(Aid,Anm) values ('6251','Devesh');
+insert into Adjuster (Aid,Anm) values ('4','Prajakta');
+insert into Adjuster (Aid,Anm) values ('3194 ','suchit');
+insert into Adjuster (Aid,Anm) values ('8587','Amit');
+insert into Adjuster (Aid,Anm) values ('1972','neha');
+
+
+--insert into UserPersonal values
+insert into UserPersonal(Uid,Ufnm,Aid) values ('100','Lane Johnson','4170');
+insert into UserPersonal (Uid,Ufnm,Aid) values ('101','Susan Copeland','1680');
+insert into UserPersonal (Uid,Ufnm,Aid) values ('102','Charles Logue','4931');
+insert into UserPersonal (Uid,Ufnm,Aid) values ('103','Brent Andrews','149');
+insert into UserPersonal(Uid,Ufnm,Aid) values ('104','Larry Blasingame','687');
+insert into UserPersonal(Uid,Ufnm,Aid) values ('105','Aaron Paulson','6251');
+insert into UserPersonal (Uid,Ufnm,Aid) values ('106','Buddy Ables','4');
+insert into UserPersonal (Uid,Ufnm,Aid) values ('107','Brian Griffin','3194');
+insert into UserPersonal (Uid,Ufnm,Aid) values ('108','Brian Ward','8587');
+insert into UserPersonal(Uid,Ufnm,Aid) values ('109',' Christopher Dean','1972');
+
+--
+select * from Adjuster
+
+--
+select * from UserPersonal
+
+--
+
+-Write a query to retrieve users from the tables. Input will be given in format 2431,2580' upon receiving the input, you should return user FullNameFL and AdjusterId
+
+CREATE FUNCTION SplitString
+(    
+    @Input NVARCHAR(MAX),
+    @Character CHAR(1)
+)
+RETURNS @Output TABLE (
+    Item NVARCHAR(1000)
+)
+AS
+BEGIN
+    DECLARE @StartIndex INT, @EndIndex INT
+ 
+    SET @StartIndex = 1
+    IF SUBSTRING(@Input, LEN(@Input) - 1, LEN(@Input)) <> @Character
+    BEGIN
+        SET @Input = @Input + @Character
+    END
+ 
+    WHILE CHARINDEX(@Character, @Input) > 0
+    BEGIN
+        SET @EndIndex = CHARINDEX(@Character, @Input)
+         
+        INSERT INTO @Output(Item)
+        SELECT SUBSTRING(@Input, @StartIndex, @EndIndex - 1)
+         
+        SET @Input = SUBSTRING(@Input, @EndIndex + 1, LEN(@Input))
+    END
+ 
+    RETURN
+END
+GO
+
+CREATE PROCEDURE GetUserDetails
+    @Aid VARCHAR(50)
+AS
+BEGIN
+    SELECT a.Aid as AdjusterID, Ufnm as FullNameFL
+    FROM Adjuster a
+	inner join UserPersonal up on a.Aid=up.Aid
+    WHERE a.Aid IN(
+        SELECT CAST(Item AS INTEGER)
+        FROM dbo.SplitString(@Aid, ',')
+    )
+END
+
+
+EXEC GetUserDetails '3194,1972'
+
+ 
